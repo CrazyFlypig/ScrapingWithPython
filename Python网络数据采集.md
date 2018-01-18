@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
 把HTML内容传到BeautifulSoup对象，转换成下面的结构：
 
-![TIM图片20180116151451](D:\project\\Ppythonython网络数据采集\TIM图片20180116151451.png)
+![TIM图片20180116151451](https://github.com/CrazyFlypig/ScrapingWithPython/blob/master/resource/image/TIM%E5%9B%BE%E7%89%8720180116151451.png)
 
 *   任何HTML（或XML）文件的任意节点信息都可以被提取出来，只要目标信息在旁边或附近有标记就行。
 
