@@ -242,7 +242,7 @@ if __name__ == '__main__':
 
 实现方式：
 
-![2.2](D:\programmer\python\Python网络数据采集\2.2.PNG)
+![](https://github.com/CrazyFlypig/ScrapingWithPython/blob/master/resource/image/2.2.PNG)
 
 1.  选择图片标签`src=../img/gifts/img1.jpg`;
 2.  选择图片标签的父标签（在示例是\<td>标签）；
