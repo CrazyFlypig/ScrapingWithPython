@@ -318,11 +318,47 @@ if __name__ == '__main__':
 *   一个函数`getLinks()`，可以某个百度百科的URL链接作为参数，然后返回一个列表，里面包含了其它词条的URL链接。
 *   一个主函数，以某个起始词条作为参数调用`getLinks()`，再从返回的URL列表里随机选择一个词条链接，再调用`getLinks()`，直到我们主动停止，或者在新的界面上没有了词条链接了，程序才停止。
 
+改进后的代码：
+
+```python
+import random
+from urllib.request import urlopen
+import re
+import datetime
+from bs4 import BeautifulSoup
+def getLinks(url):
+    html = urlopen(url)
+    bsObj = BeautifulSoup(html)
+    #读取明星关系标签组
+    labels = bsObj.find("div", {"id":"slider_relations"}).findAll("a", href=re.compile("^http://baike.baidu\.com/subview(/[\\d]+)+\.htm"))
+    links = []
+    #获取明星关系中的链接
+    for label in labels:
+        links.append(label.attrs['href'])
+    return links
+if __name__ == "__main__":
+    #获得随机数种子
+    random.seed(datetime.datetime.now())
+    links = getLinks("http://baike.baidu.com/subview/2632/19244814.htm")
+    for i in range(1,6):
+        if len(links) > 0:
+            newURL = links[random.randint(0, len(links)-1)]
+            print(newURL)
+            links = getLinks(newURL)
+
+```
+
+利用系统当前时间生成一个随机数生成器，保证程序运行时，选择一个全新的路径。
+
 ##### 伪随机数和随机数种子
 
 >   随机数算法在初始阶段都需要提供随机数“种子”（random seed），而完全相同的种子每次将产生同样的“随机”数序列，因此程序选择系统时间作为随机数序列生成的起点，程序运行时更具随机性。
 >
 >   Python的伪随机数（pseudorandom number）生成器是[梅森旋转算法](https://en.wikipedia.org/wiki/Mersenne_Twister)，它产生的随机数很难预测且呈均匀					分布，缺点是耗费CPU资源。
+
+##### 异常处理
+
+>   代码需要增加异常处理以提升脚本运行的稳固性。
 
 ### 3.2采集整个网络
 
@@ -341,4 +377,66 @@ if __name__ == '__main__':
 
 一个常用的费时的网站采集方法就是从顶级界面开始（如主页），然后搜索页面上所有链接，形成列表。再去采集这些链接的每一个页面，然后在把每个页面上找到的链接形成新的列表，重复执行下一轮采集。
 
-假设每个页面有10个链接，网站上有5个页面深度，那么采集整个网站就需要采集$$10^{5}$$个页面。虽然“5个页面深度，每页10个链接
+假设每个页面有10个链接，网站上有5个页面深度，那么采集整个网站就需要采集$$10^{5}$$个页面。虽然“5个页面深度，每页10个链接“是网站的主流配置	，但一般网站很少有那么多页面，大部分内链是重复的。
+
+为避免一个页面被重复采集多次，链接去重是非常重要的。把已发现的所有链接放到一起，并保存在方便查询的列表里。只有新的链接才会被采集，之后再从其页面中搜索其它链接：
+
+```python
+from urllib.error import URLError
+from urllib.request import urlopen
+import re
+from bs4 import BeautifulSoup
+def getLinks(url):
+    global pages
+    html = urlopen(url)
+    bsObj = BeautifulSoup(html)
+    try:
+        labels = bsObj.find("div", {"id":"slider_relations"}).findAll("a", href=re.compile("^http://baike.baidu\.com/subview(/[\\d]+)+\.htm"))
+        for label in labels:
+            if  label.attrs['href'] not in pages:
+                newPage = label.attrs['href']
+                namePage = label.find("div", {"class":"name"}).attrs['title']
+                print(namePage + ":" + newPage)
+                pages.add(newPage)
+                getLinks(newPage)
+    except URLError as e:
+        print(e)
+    except AttributeError as e :
+        print(e)
+if __name__ == '__main__':
+    pages = set()
+    try:
+        getLinks("http://baike.baidu.com/subview/2632/19244814.htm")
+    except TimeoutError as e :
+        print(e)
+```
+
+这段代码实现了，以百度百科里面的明星关系为依据，以周杰伦的百度百科作为起始页面，依次爬取其相应的人物百科界面，将其打印在控制台。
+
+##### 关于递归的警告
+
+>   Python默认的递归限制是1000次。设置一个较大的递归计数器，或者其它手段不让其停止。
+
+### 收集整个网站数据
+
+第一步就是先观察网站上的一些页面，然后拟定一个采集模式。
+
+自己后面找个网站，当作小项目来写写
+
+##### 不同的模式应对不同的需求
+
+>   在一个异常处理语句中执行多条语句是不明智的。首先，你无法确定异常被哪行代码抛出。其次，异常会影响网页后面的信息获取。
+>
+>   通常按照网站上信息出现的可能性高低进行排序是可行，但偶尔会丢失数据，只要作好详细日志的保存就好了。
+
+### 3.3 通过互联网采集
+
+在写爬虫随意跟随外链跳转之前，问自己几个问题：
+
+*   我要手机哪些数据？这些数据可以通过采集几个已经确定的网站完成吗？或者我的爬虫需要发现哪些我可能不知道的网站吗？
+*   但我的爬虫到了某个网站，它是立即顺着下一个出站链接跳到一个新网站，还是在网站上待一会，深入采集网站内容？
+*   有没有我不想采集的一类网站？
+*   如果我的网络爬虫引起了某个网站网管的怀疑，我如何避免法律责任？
+
+
+    ​		
