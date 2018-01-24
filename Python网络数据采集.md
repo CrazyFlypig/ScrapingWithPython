@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
 把HTML内容传到BeautifulSoup对象，转换成下面的结构：
 
-![TIM图片20180116151451](https://github.com/CrazyFlypig/ScrapingWithPython/blob/master/resource/image/TIM%E5%9B%BE%E7%89%8720180116151451.png)
+![TIM图片20180116151451](https://github.com/CrazyFlypig/ScrapingWithPython/blob/master/resource/image/1.2-1.png)
 
 *   任何HTML（或XML）文件的任意节点信息都可以被提取出来，只要目标信息在旁边或附近有标记就行。
 
@@ -242,7 +242,7 @@ if __name__ == '__main__':
 
 实现方式：
 
-![](https://github.com/CrazyFlypig/ScrapingWithPython/blob/master/resource/image/2.2.PNG)
+![](https://github.com/CrazyFlypig/ScrapingWithPython/blob/master/resource/image/2.2-1.PNG)
 
 1.  选择图片标签`src=../img/gifts/img1.jpg`;
 2.  选择图片标签的父标签（在示例是\<td>标签）；
@@ -423,6 +423,8 @@ if __name__ == '__main__':
 
 自己后面找个网站，当作小项目来写写
 
+[实践项目-爬取网站图片](https://github.com/CrazyFlypig/ScrapingWithPython/tree/master/Projects/crawlingImage)
+
 ##### 不同的模式应对不同的需求
 
 >   在一个异常处理语句中执行多条语句是不明智的。首先，你无法确定异常被哪行代码抛出。其次，异常会影响网页后面的信息获取。
@@ -439,4 +441,149 @@ if __name__ == '__main__':
 *   如果我的网络爬虫引起了某个网站网管的怀疑，我如何避免法律责任？
 
 
-    ​		
+```python
+import random
+import datetime
+from urllib.request import urlopen
+import re
+from bs4 import BeautifulSoup
+#模块信息
+from urllib.request import urlparse
+#### URL: scheme://netloc/path;parameters?query#fragment
+# 获取页面所有内链接列表
+def getInternalLinks(bsObj, includerUrl):
+    internalLinks = []
+    # 找出所有以“/”开头的链接
+    for link in bsObj.findAll("a", href=re.compile("^(/|.*" + includerUrl + ")")):
+        if link.attrs['href'] is not None:
+            if link.attrs['href'] not in internalLinks:
+                internalLinks.append(link.attrs['href'])
+    return internalLinks
+# 获取页面所有外链的列表
+def getExternalLinks(bsObj, excludeUrl):
+    externalLinks = []
+    # 找出所有以“http”或“www”开头且不包含当前URL的链接
+    for link in bsObj.findAll("a", href=re.compile("^(http|www)((?!" + excludeUrl +").)*$")):
+        if link.attrs['href'] is not None:
+            if link.attrs['href'] not in externalLinks:
+                externalLinks.append(link.attrs['href'])
+    return externalLinks
+#
+def spiltAddress(address):
+    addressParts = address.replace("http://", "").split("/")
+    return addressParts
+# 得到随机的外链接
+def getRandomExternalLink(startingPage):
+    html = urlopen(startingPage)
+    bsObj = BeautifulSoup(html, "html.parser")
+    externalLinks = getExternalLinks(bsObj, spiltAddress(startingPage)[0])
+    if  len(externalLinks) == 0 :
+        print("No external links, looking around the site for one")
+        internalLicks = getExternalLinks(startingPage)
+        while True:
+            internalPage = internalLicks[random.randint(0, len(internalLicks) - 1)]
+            if internalPage not in internalPages:
+                internalPages.add(internalPage)
+                return internalPage
+                break;
+    else:
+        return externalLinks[random.randint(0, len(externalLinks) - 1)]
+#
+def followExternalOnly(startingSite):
+    externalLink = getRandomExternalLink(startingSite)
+    print("Random external link is: " + externalLink)
+    followExternalOnly(externalLink)
+
+if  __name__ == "__main__":
+    pages = set()
+    internalPages = set()
+    random.seed(datetime.datetime.now())
+    followExternalOnly("http://oreilly.com")
+```
+
+上面程序从`http://oreilly.com`开始，然后随机的从一个外链跳到另一个外链。（需要翻墙）
+
+网站首页并不保证一定可以发现外链，为了程序可以继续下去，就需递归进入网站直到能找到一个外链为止。
+
+程序简化流程图：
+
+![](https://github.com/CrazyFlypig/ScrapingWithPython/blob/master/resource/image/3.3-1.png)
+
+把任务分解成像”获取页面上所有的外链“这样的小函数，符合程序”高内聚、低耦合“指导原则。例如，采集一个网站上所有的外链，并记录每一个外链，可以实现如下函数：
+
+```python
+# 收集网站上发现的所有外链接
+from urllib.request import urlopen
+
+import re
+from bs4 import BeautifulSoup
+
+allExtLinks = set()
+allIntLinks = set()
+
+
+def getAllExternalLinks(siteUrl):
+    html = urlopen(siteUrl)
+    bsObj = BeautifulSoup(html)
+    internalLinks = getInternalLinks(bsObj, spiltAddress(siteUrl)[0])
+    externalLinks = getExternalLinks(bsObj, spiltAddress(siteUrl)[0])
+    for link in externalLinks:
+        if link not in allExtLinks:
+            allExtLinks.add(link)
+            print(link)
+    for link in internalLinks:
+        if link not in allIntLinks:
+            print("即将获取链接的URL是：" + link)
+            allIntLinks.add(link)
+            getAllExternalLinks(link)
+
+
+# 获取页面所有内链接列表
+def getInternalLinks(bsObj, includerUrl):
+    internalLinks = []
+    # 找出所有以“/”开头的链接
+    for link in bsObj.findAll("a", href=re.compile("^(/|.*" + includerUrl + ")")):
+        if link.attrs['href'] is not None:
+            if link.attrs['href'] not in internalLinks:
+                internalLinks.append(link.attrs['href'])
+    return internalLinks
+
+
+# URL切割
+def spiltAddress(address):
+    addressParts = address.replace("http://", "").split("/")
+    return addressParts
+
+
+# 获取当前页面的所有外链
+def getExternalLinks(bsObj, excludeUrl):
+    externalLinks = []
+    # 找出所有以“http”或“www”开头且不包含当前URL的链接
+    for link in bsObj.findAll("a", href=re.compile("^(http|www)((?!" + excludeUrl + ").)*$")):
+        if link.attrs['href'] is not None:
+            if link.attrs['href'] not in externalLinks:
+                externalLinks.append(link.attrs['href'])
+    return externalLinks
+```
+
+程序流程图：
+
+![](https://github.com/CrazyFlypig/ScrapingWithPython/blob/master/resource/image/3.3-2.png)
+
+写代码之前拟个大纲或画流程图是很好的编程习惯。
+
+##### 处理网格重定向
+
+>   重定向（redirect）允许一个网页在不同的域名下显示。重定向有两种形式：
+>
+>   *   服务器重定向，网页在加载之前先改变了URL
+>   *   客户端重定向，如“10秒后自动跳转之类的”，表示在跳转到新的URL之前的网页需要加载内容。
+
+对于服务端重定向，在Python 3.x版本的urllib库，它会自动处理重定向。不过有时你要采集的页面的URL可能并不是你当前所在页面的URL。
+
+### 3.4 用Scrapy采集
+
+Scrapy是一个可以大幅度降低网页链接查找和识别工作复杂度的Python库，可以轻松采集一个或多个域名的信息。
+
+
+
