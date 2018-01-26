@@ -583,7 +583,5 @@ def getExternalLinks(bsObj, excludeUrl):
 
 ### 3.4 用Scrapy采集
 
-Scrapy是一个可以大幅度降低网页链接查找和识别工作复杂度的Python库，可以轻松采集一个或多个域名的信息。
-
-
+[Scrapy学习笔记]()
 
