@@ -3,6 +3,9 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/ScrapingWithPython.iml" filepath="$PROJECT_DIR$/ScrapingWithPython.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Projects/Test/Projects/Test.iml" filepath="$PROJECT_DIR$/Projects/Test/Projects/Test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Projects/crawlingImage/Projects/crawlingImage.iml" filepath="$PROJECT_DIR$/Projects/crawlingImage/Projects/crawlingImage.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Projects/scrapySpider/Projects/scrapySpider.iml" filepath="$PROJECT_DIR$/Projects/scrapySpider/Projects/scrapySpider.iml" />
     </modules>
   </component>
 </project>
