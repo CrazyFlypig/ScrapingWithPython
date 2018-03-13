@@ -277,3 +277,59 @@ scrapy crawl quotes -o quotes.json
 
 如果要对已抓取的 Item 执行更复杂的操作，则可以编写 [Item Pipeline]() 。在创建项目时，已经在 `tutorial / pipelines.py` 中为您创建了 Item Pipeline 的占位符文件。
 
+### 6. 跟进链接
+
+首先是提取我们要关注的网页链接。检查我们的页面，我们可以看到下一个链接与下面的标记：
+
+```html
+<ul class="pager">
+    <li class="next">
+        <a href="/page/2/">Next <span aria-hidden="true">&rarr;</span></a>
+    </li>
+</ul>
+```
+
+首先在shell中提取它：
+
+```shell
+response.css('li.next a').extract_first()
+u'<a href="/page/2/">Next <span aria-hidden="true">\u2192</span></a>'
+```
+
+这是获取到锚（anchor）元素，但我们想要属性 herf。为此，Scrapy 支持一个CSS扩展，让您选择属性内容，如下所示：
+
+```shell
+response.css('li.next a::attr(href)').extract_first()
+u'/page/2/'
+```
+
+修改我们的爬虫，递归跟进到下一页的链接，并从中提取数据：
+
+```python
+import scrapy
+
+class QuotesSpider(scrapy.Spider):
+    name = "quotes"
+
+    start_urls = [
+        'http://quotes.toscrape.com/page/1/',
+    ]
+
+    def parse(self, response):
+        for quote in response.css('div.quote'):
+            yield {
+                'text': quote.css('span.text::text').extract_first(),
+                'author': quote.css('span small::text').extract_first(),
+                'tags': quote.css('div.tags a.tag::text').extract(),
+            }
+        next_page = response.css('li.next a::attr(href)').extract_first()
+        if next_page is not None:
+            next_page = response.urljoin(next_page)
+            yield scrapy.Request(next_page, callback=self.parse)
+
+```
+
+在第一个次提取完数据后，`parse()`方法寻找到下一页连接，使用`urljoin()`构建一个完整的绝对 URL（因为链接有可能是相对的），并产生一个新的请求到下一页，将其自身注册为回调，以处理下一页数据提取，并保持抓取。
+
+Scrapy 的跟进链接机制：当在回调方法中产生一个请求时，当当前请求完成时 Scrapy 会调度要发送的请求，并注册一个回调方法。基于这个机制，可以构建复杂的抓取工具，根据定义的规则跟进链接，并根据访问的网页提取不同类型的数据。
+
